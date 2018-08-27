@@ -21,3 +21,11 @@ To understand the extent and nature of the gender gap in online developer commun
 
 
 ### Usage
+
+
+### Data
+We use surveys from 3 major online developer communities:
+
+- Stack Overflow [survey](https://insights.stackoverflow.com/survey/2018/) (download latest survey results [here](https://drive.google.com/uc?export=download&id=1_9On2-nsBQIw3JiY43sWbrF8EjrqrR4U))
+- GitHub [survey](http://opensourcesurvey.org/2017/) (download latest survey results [here](https://github.com/github/open-source-survey/releases/download/v1.0/data_for_public_release.zip))
+- HackerRank [survey](https://www.kaggle.com/hackerrank/developer-survey-2018/home) (download latest survey results [here](https://www.kaggle.com/hackerrank/developer-survey-2018/))
