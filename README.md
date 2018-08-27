@@ -4,7 +4,7 @@ Analyses of online developer community surveys for the UNU-CS Gender Tech Lab
 
 ## Overview
 
-Online developer communities boast millions of users - over 29 million on GitHub and over 8 million on Stack Overflow, in 2018. Participation in these communities is becoming one of the primary ways software developers learn new programming languages, improve their skills, develop collaborative projects, and find new job opportunities. [[1]](David and Shapiro, 2008) [[2]](Ford et al., 2016) [[3]](Vasilescu et al., 2015)  
+Online developer communities boast millions of users - over 29 million on GitHub and over 8 million on Stack Overflow, in 2018. Participation in these communities is becoming one of the primary ways software developers learn new programming languages, improve their skills, develop collaborative projects, and find new job opportunities. (David and Shapiro, 2008; Ford et al., 2016; Vasilescu et al., 2015)  
 
 Developers on these sites may ask and answer coding questions to improve their skills (e.g. Stack Overflow), use those skills to contribute to open-source code (e.g. GitHub) and participate in coding challenges (e.g. HackerRank). These platforms are becoming increasingly important to hiring decisions, as recruiters look at GitHub contributions or reputation on Stack Overflow as indicators of developers' skill.
 
