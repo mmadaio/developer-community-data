@@ -1,0 +1,337 @@
+---
+title: "OCC_log-linear_models"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## Composite Log-Linear Models
+```{r}
+# 
+# ## Set up table
+# so_tbl = table(so_mf_df$Gender, so_mf_df$YearsCoding, so_mf_df$StackOverflowConsiderMember, so_mf_df$StackOverflowParticipate) 
+# so.df <- as.data.frame(as.table(so_tbl))
+# so.df
+# 
+# lms <- step(glm(Freq ~ Var1*Var2*Var3*Var4, data=so.df, family=poisson))
+# 
+# ## Independence model
+# mod0 <- glm(Freq ~ (Var1 + Var2 + Var3+ Var4), 
+#             data = so.df, family = poisson)
+# summary(mod0)
+# 
+# ## 2-way interaction model
+# mod1 <- glm(Freq ~ (Var1 + Var2 + Var3 +  Var4)^2, 
+#             data = so.df, family = poisson)
+# summary(mod1)
+# coef(mod1)
+# 
+# pchisq(deviance(mod1), df = df.residual(mod1), lower.tail = F)
+# 
+# ## Modified Saturated model
+# mod2 <- glm(Freq ~ Var1*Var2*Var3*Var4 - (Var1:Var2:Var3:Var4+Var1:Var2:Var3+Var1:Var3:Var4+Var1:Var2:Var4), 
+#             data = so.df, family = poisson)
+# summary(mod2)
+# anova(mod2, test="Chisq")
+# 1 - pchisq(148,df=180)
+# 
+# pchisq(deviance(mod2), df = df.residual(mod2), lower.tail = F)
+# 
+# ## Saturated model
+# mod3 <- glm(Freq ~ Var1*Var2*Var3*Var4, 
+#             data = so.df, family = poisson)
+# anova(mod2, mod3)
+# 
+# pchisq(deviance(mod2)-deviance(mod3),
+#      df.residual(mod2)-df.residual(mod3),
+#     lower.tail=FALSE)
+# 
+# pchisq(deviance(mod2), df = df.residual(mod2), lower.tail = F)
+# 
+# anova(mod2, test="Chisq")
+# 1 - pchisq(148, 180)
+# 
+# 
+# 
+# ## Conditional independence model
+# mod4 <- glm(Freq ~ (Var2*Var3) + (Var1*Var3) + (Var1*Var4) + (Var2*Var4) + (Var3*Var4), 
+#             data = so.df, family = poisson)
+# summary(mod3)
+# 
+# anova(mod0, mod1, mod2, mod3)
+# 
+# #fm = loglm(formula=~Var1 + Var2, Var3, data=so_tbl)
+# mod1 = loglin(so_tbl,margin=list(1,2,3,4)) # Complete independence
+# mod1
+# 
+# mod2 = loglin( so_tbl, margin=list(c(1,3),c(2,3)) )
+# mod2
+# 
+# G2 = mod1$lrt-mod2$lrt; DF = mod1$df-mod2$df
+# G2; DF; 1-pchisq(G2,DF)
+# 
+# mod3 = loglin( so_tbl, margin=list(c(1,2),c(1,3),c(2,3), c(1,4), c(2,4), c(3,4)) ) 
+# mod3
+# 
+# 1-pchisq(mod3$lrt,mod3$df)
+# G2 = mod1$lrt-mod3$lrt; DF = mod1$df-mod3$df
+# G2; DF; 1-pchisq(G2,DF)
+# 
+# 
+# ```
+# 
+# ```{r}
+# so_tbl = table(so_mf_df$Gender, so_mf_df$AgreeDisagree2, so_mf_df$StackOverflowConsiderMember, so_mf_df$StackOverflowParticipate, so_mf_df$StackOverflowVisit) 
+# so.df <- as.data.frame(as.table(so_tbl))
+# 
+# 
+# ## Independence model
+# mod0 <- glm(Freq ~ (Var1 + Var2 + Var3+ Var4 + Var5), 
+#             data = so.df, family = poisson)
+# 
+# ## 2-way interaction model
+# mod1 <- glm(Freq ~ (Var1 + Var2 + Var3 +  Var4)^2, 
+#             data = so.df, family = poisson)
+# 
+# ## Saturated Model
+# mod.full <- glm(Freq ~ (Var1*Var2*Var3*Var4*Var5), 
+#             data = so.df, family = poisson)
+# 
+# ## Modified Saturated model
+# mod3 <- glm(Freq ~ (Var1 + Var2 + Var3+ Var4 + Var5)^2, 
+#             data = so.df, family = poisson)
+# 
+# 
+# anova(mod3, test="Chisq")
+# anova(mod3, mod0, mod.full)
+# 1 - pchisq(734,df=953)
+# ```
+# 
+# ```{r}
+# 
+# likelihood.test = function(x) {
+# nrows = dim(x)[1]                      # no. of rows in contingency table
+# ncols = dim(x)[2]                      # no. of cols in contingency table
+# chi.out = chisq.test(x,correct=F)      # do a Pearson chi square test
+# table = chi.out[[6]]                   # get the OFs
+# ratios = chi.out[[6]]/chi.out[[7]]     # calculate OF/EF ratios
+# sum = 0                                # storage for the test statistic
+# for (i in 1:nrows) {
+#      for (j in 1:ncols) {
+#           sum = sum + table[i,j]*log(ratios[i,j])
+#      }
+# }
+# sum = 2 * sum                          # the likelihood ratio chi square
+# df = chi.out[[2]]                      # degrees of freedom
+# p = 1 - pchisq(sum,df)                 # p-value
+# out = c(sum, df, p, chi.out[[1]])      # the output vector
+# names(out) = c("LR-chisq","df","p-value","Pears-chisq")
+# round(out,4)                           # done!
+# }
+# ```
+# ## 2-way log-linear / GLM to test method and interp first
+# 
+# ```{r}
+# 
+# so_tbl = table(so_mf_df$Gender, so_mf_df$YearsCoding, so_mf_df$StackOverflowConsiderMember) 
+# so.df <- as.data.frame(as.table(so_tbl))
+# so.df
+# mod0 <- glm(Freq ~ (Var1*Var2*Var3), 
+#             data = so.df, family = poisson)
+# summary(mod0)
+# fitted(mod0)
+# plot(mod0)
+# anova(mod0, mod1)
+# 
+# step(glm(Freq ~ 1, data=so.df, family=poisson()), scope=list(upper=mod1), direction='forward')
+# 
+# anova(mod0, test="Chisq")
+# 
+# mosaicplot(so_tbl, shade=TRUE)
+# 
+# gender.community = margin.table(so_tbl, c(1,3))
+# likelihood.test(gender.community)
+# gender.community
+# head(so_tbl)
+# 
+# #loglm( ~ so_mf_df$Gender + so_mf_df$Gender, data=so_tbl)
+# 
+# ```
+# 
+# ## 3-way Log-Linear Models
+# ```{r}
+# 
+# so_tbl = table(so_mf_df$Gender, so_mf_df$YearsCoding, so_mf_df$StackOverflowConsiderMember) 
+# so.df <- as.data.frame(as.table(so_tbl))
+# so.df
+# mod0 <- glm(Freq ~ (Var1 + Var2 + Var3), 
+#             data = so.df, family = poisson)
+# summary(mod0)
+# pchisq(deviance(mod0), df = df.residual(mod0), lower.tail = F)
+# cbind(mod0$data, fitted(mod0))
+# 
+# mod1 <- glm(Freq ~ (Var1 + Var2 + Var3)^2, 
+#             data = so.df, family = poisson)
+# summary(mod1)
+# exp(0.45799)
+# pchisq(deviance(mod1), df = df.residual(mod1), lower.tail = F)
+# 
+# mod2 <- glm(Freq ~ Var1*Var2*Var3, 
+#             data = so.df, family = poisson)
+# summary(mod2)
+# pchisq(deviance(mod2), df = df.residual(mod2), lower.tail = F)
+# 
+# mod3 <- glm(Freq ~ (Var2*Var3) + (Var1*Var3), 
+#             data = so.df, family = poisson)
+# summary(mod3)
+# 
+# anova(mod1, mod3)
+# 
+# #fm = loglm(formula=~Var1 + Var2, Var3, data=so_tbl)
+# mod1 = loglin(so_tbl,margin=list(1,2,3)) # Complete independence
+# mod1
+# 
+# mod2 = loglin( so_tbl, margin=list(c(1,3),c(2,3)) )
+# mod2
+# 
+# G2 = mod1$lrt-mod2$lrt; DF = mod1$df-mod2$df
+# G2; DF; 1-pchisq(G2,DF)
+# 
+# mod3 = loglin( so_tbl, margin=list(c(1,2),c(1,3),c(2,3)) ) 
+# mod3
+# 
+# 1-pchisq(mod3$lrt,mod3$df)
+# G2 = mod2$lrt-mod3$lrt; DF = mod2$df-mod3$df
+# G2; DF; 1-pchisq(G2,DF)
+# 
+# 
+# 
+# ```
+# ## GitHub Log-linear models
+# ```{r}
+# ### Composite model
+# gh_tbl_1 = table(gh_mf_df$GENDER, gh_mf_df$OSS.IDENTIFICATION, gh_mf_df$DISCOURAGING.BEHAVIOR.UNWELCOMING.LANGUAGE, gh_mf_df$FUTURE.CONTRIBUTION.LIKELIHOOD, gh_mf_df$EXTERNAL.EFFICACY) 
+# gh.df.1 <- as.data.frame(as.table(gh_tbl_1))
+# 
+# ## Model without discouraging behavior, and with YearsCoding
+# gh_tbl_2 = table(gh_mf_df$GENDER, gh_mf_df$OSS.IDENTIFICATION, gh_mf_df$EMPLOYMENT.STATUS, gh_mf_df$FUTURE.CONTRIBUTION.LIKELIHOOD, gh_mf_df$EXTERNAL.EFFICACY) 
+# gh.df.2 <- as.data.frame(as.table(gh_tbl_2))
+# 
+# mod1.2 <- glm(Freq ~ (Var1 + Var2 + Var3+Var4+Var5)^2, 
+#             data = gh.df.2, family = poisson)
+# 
+# 
+# ## Independence model
+# mod0 <- glm(Freq ~ (Var1 + Var2 + Var3+Var4+Var5), 
+#             data = gh.df, family = poisson)
+# 
+# 
+# ## 2-way interaction
+# mod1.1 <- glm(Freq ~ (Var1 + Var2 + Var3+Var4+Var5)^2, 
+#             data = gh.df.1, family = poisson)
+# 
+# anova(mod1.2, test="Chisq")
+# 
+# anova(mod1.1, test="Chisq")
+# anova(mod0, mod1)
+# 
+# ## Saturated model
+# mod.full <- glm(Freq ~ (Var1*Var2*Var3*Var4*Var5), 
+#             data = gh.df.2, family = poisson)
+# 
+# anova(mod.full, test="Chisq")
+# 
+# coef(summary(glmFitE))
+
+
+```
+
+
+
+```{r}
+
+
+# 
+# gh_tbl = table(gh_mf_df$GENDER, gh_mf_df$EXTERNAL.EFFICACY, gh_mf_df$DISCOURAGING.BEHAVIOR.UNWELCOMING.LANGUAGE) 
+# gh.df <- as.data.frame(as.table(gh_tbl))
+# gh.df
+# mod0 <- glm(Freq ~ (Var1 + Var2 + Var3), 
+#             data = gh.df, family = poisson)
+# summary(mod0)
+# pchisq(deviance(mod0), df = df.residual(mod0), lower.tail = F)
+# cbind(mod0$data, fitted(mod0))
+# 
+# mod1 <- glm(Freq ~ (Var1 + Var2 + Var3)^2, 
+#             data = gh.df, family = poisson)
+# summary(mod1)
+# 
+# 
+# 
+# gh_tbl = table(gh_mf_df$GENDER, gh_mf_df$OSS.IDENTIFICATION, gh_mf_df$DISCOURAGING.BEHAVIOR.UNWELCOMING.LANGUAGE) 
+# gh.df <- as.data.frame(as.table(gh_tbl))
+# gh.df
+# mod0 <- glm(Freq ~ (Var1 + Var2 + Var3), 
+#             data = gh.df, family = poisson)
+# summary(mod0)
+# pchisq(deviance(mod0), df = df.residual(mod0), lower.tail = F)
+# cbind(mod0$data, fitted(mod0))
+# 
+# mod1 <- glm(Freq ~ (Var1 + Var2 + Var3)^2, 
+#             data = gh.df, family = poisson)
+# summary(mod1)
+# 
+# 
+# 
+# m0 <- loglm(~1+2+3, data=gh_tbl)
+# summary(m0)
+# 
+# m1 <- loglm(~1*(2+3), data=gh_tbl)
+# summary(m1)
+# 
+# m2 <- loglm(~1*2+3, data=gh_tbl)
+# summary(m2)
+# 
+# m3 <- loglm(~1+2*3, data=gh_tbl)
+# 
+# m4 <- loglm(~1*3+2, data=gh_tbl)
+# 
+# 
+# anova(m0,m1,m2,m3,m4)
+# 
+# ```
+# ## Logistic Regression models
+# ```{r}
+# ### Need to reduce response to binary options
+# 
+# ## Maybe: ConsiderMember, FeelsKinship, CommunityValuesMe, ContributeCode, ContributionLikelihood
+# ## Or: Discretize VisitFrequency and ParticipateFrequency
+# 
+# levels(gh_mf_df$FUTURE.CONTRIBUTION.LIKELIHOOD)
+# 
+# m0 <- glm(so_mf_df$StackOverflowConsiderMember ~ so_mf_df$Gender*so_mf_df$StackOverflowParticipate + so_mf_df$YearsCoding + so_mf_df$FormalEducation + so_mf_df$UndergradMajor, family=binomial)
+# 
+# 
+# summary(m0)
+```

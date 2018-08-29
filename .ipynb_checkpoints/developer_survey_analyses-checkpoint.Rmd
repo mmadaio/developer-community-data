@@ -1,0 +1,629 @@
+---
+title: "Online Developer Community Survey Analyses"
+output: 
+  html_document:
+    toc: true # table of content true
+    toc_depth: 3  # upto three depths of headings (specified by #, ## and ###)
+    number_sections: true  ## if you want number sections at each table header
+    toc_float: true
+---
+
+# Overview
+
+Online developer communities boast millions of users - over 29 million on GitHub and over 8 million on Stack Overflow, in 2018. Participation in these communities is becoming one of the primary ways software developers learn new programming languages, improve their skills, develop collaborative projects, and find new job opportunities. [[1]](David and Shapiro, 2008) [[2]](Ford et al., 2016) [[3]](Vasilescu et al., 2015)  
+
+Developers on these sites may ask and answer coding questions to improve their skills (e.g. Stack Overflow), use those skills to contribute to open-source code (e.g. GitHub) and participate in coding challenges (e.g. HackerRank). These platforms are becoming increasingly important to hiring decisions, as recruiters look at GitHub contributions or reputation on Stack Overflow as indicators of developers' skill.
+
+However, despite the promise for these online developer communities to support software developers in their professional development, there are indicators that there may be serious difference in women and men's participation in these communities - differences which may further exacerbate existing gender gaps in the ICT workforce writ large.
+
+
+## Research questions
+
+To understand the extent and nature of the gender gap in online developer communities, we ask the following research questions:
+
+1. How do male and female developers differ in their participation in online developer communities?
+2. How do male and female developers differ in their perceptions of belonging and kinship in online developer communities?
+3. How do male and female developers in online communities differ in their employment and prior experience with coding?
+
+
+# Setup
+
+These lines install the necessary packages and libraries needed to run the code. The packages only need to be installed the first time you run it. 
+
+```{r, echo=T, message=FALSE, warning=FALSE}
+#install.packages("survey")
+#install.packages("vcd")
+path_to_file = "C:/Users/michael.madaio/Downloads/fifer_1.1.tar.gz"
+#install.packages(c('party', 'plotrix', 'randomForest', 'randomForestSRC', 'Hmisc', 'fields'))
+#install.packages(path_to_file, repos = NULL, type="source")
+#install.packages("COUNT")
+#install.packages("reticulate")
+library(COUNT)
+library("survey")
+library("MASS")
+library(vcd)
+library("fifer")
+library(reticulate)
+
+```
+
+
+## Load Data
+
+Load in the .csv data sets. We use surveys from 3 major online developer communities:
+
+- Stack Overflow [survey](https://insights.stackoverflow.com/survey/2018/) (download latest survey results [here](https://drive.google.com/uc?export=download&id=1_9On2-nsBQIw3JiY43sWbrF8EjrqrR4U))
+- GitHub [survey](http://opensourcesurvey.org/2017/) (download latest survey results [here](https://github.com/github/open-source-survey/releases/download/v1.0/data_for_public_release.zip))
+- HackerRank [survey](https://www.kaggle.com/hackerrank/developer-survey-2018/home) (download latest survey results [here](https://www.kaggle.com/hackerrank/developer-survey-2018/))
+
+
+### Define data folder
+
+```{r}
+data_folder = "C:/Users/michael.madaio/Documents/EQUALS/Case study - Developer communities/Data/"
+```
+
+
+### Load Stack Overflow
+
+```{r}
+so_file = "survey_results_public.csv"
+so_path = paste(data_folder, so_file, sep = "", collapse = NULL)
+so_df <- read.csv(so_path, header=T, stringsAsFactors=TRUE) 
+```
+
+
+### Load GitHub
+
+```{r, results='hide'}
+gh_file = "survey_data.csv"
+gh_path = paste(data_folder, gh_file, sep = "", collapse = NULL)
+gh_df <- read.csv(gh_path, header=T, stringsAsFactors=TRUE) 
+```
+
+
+### Load HackerRank
+
+```{r, results='hide'}
+hr_file = "HackerRank-Developer-Survey-2018-Values.csv"
+hr_path = paste(data_folder, hr_file, sep = "", collapse = NULL)
+hr_df <- read.csv(hr_path, header=T, stringsAsFactors=TRUE) 
+```
+
+
+## Clean Data
+
+Create a new dataframe for each data set that only includes respondents that indicated Male and Female on the surveys. For the purposes of this analysis, we only look for differences between respondents that selected either Male or Female. Further analyses may look for differences among non-binary, transgender, or other respondents as well.
+
+
+### Stack Overflow
+
+```{r}
+## Remove all rows with NA for Gender
+so_mf_df <- so_df
+so_mf_df <- so_mf_df[!is.na(so_mf_df$Gender),]
+
+## Create new dataframe with respondents who selected Male or Female 
+so_mf_df = so_mf_df[(so_mf_df$Gender == "Male") | (so_mf_df$Gender == "Female"), ]
+so_mf_df$Gender <- so_mf_df$Gender[ , drop=TRUE]
+summary(so_mf_df$Gender)
+```
+
+
+### GitHub
+
+```{r}
+## Create new dataframe with respondents who selected Male or Female
+gh_mf_df = gh_df[(gh_df$GENDER == "Man") | (gh_df$GENDER == "Woman"), ]
+gh_mf_df$GENDER <- gh_mf_df$GENDER[ , drop=TRUE]
+summary(gh_mf_df$GENDER)
+```
+
+
+### HackerRank
+
+```{r}
+## Create new dataframe with respondents who selected Male or Female
+hr_mf_df = hr_df[(hr_df$q3Gender == "Male") | (hr_df$q3Gender == "Female"), ]
+hr_mf_df$q3Gender <- hr_mf_df$q3Gender[ , drop=TRUE]
+summary(hr_mf_df$q3Gender)
+```
+  
+  
+# Chi-Square analyses
+
+In this section, we test whether there is a 2-way relationship between Gender and our respective variables of interest for our research questions.
+
+For each Chi-square test, we follow it by computing the Pearson standardized residuals ($r_{ij}$), to identify whether the observed values are significantly different from the expected values. We use an absolute value of 2 as our threshold for significance, following Agresti (2002).
+
+As we test multiple hypotheses, we follow Chi-Squares with a post-hoc correction of the $p$-values for multiple hypothesis testing, using the Benjamini-Hochberg method (Benjamini and Hochberg, 1995). All $p$-values reported below are after adjusting the Benjamini-Hochberg correction.
+  
+  
+***
+
+## RQ1: Relationship between Gender and Participation in Online Developer Communities
+
+How do male and female developers differ in their participation in online developer communities?
+
+We hypothesize that women will participate less overall, and in less publicly visible ways. [[1]](David and Shapiro, 2008) [[2]](Ford et al., 2016) [[3]](Vasilescu et al., 2015)  
+  
+  
+### Registered Account  
+
+
+**Survey Question**: "Do you have a registered account with Stack Overflow?"  
+
+
+There is a significant relationship between Gender and having a registered account on Stack Overflow ($p$<0.001), with men more likely to have an account ($r_{ij}$ = 21.4).   
+
+```{r, echo=TRUE}
+so_tbl_acc = table(so_mf_df$Gender, so_mf_df$StackOverflowHasAccount)
+so_acc <- chisq.test(so_tbl_acc, correct=TRUE)
+print(so_acc)
+print(so_acc$stdres)
+```
+  
+### Visit Frequency
+
+**Survey Question**: "How often do you visit Stack Overflow?"  
+
+
+There is a significant relationship between Gender and visiting Stack Overflow more often ($p$<0.001), with female respondents more likely to have only visited once ($r_{ij}$ = 8.98) or a few times per month ($r_{ij}$ = 8.62), and men more likely to have visited multiple times per day ($r_{ij}$ = 5.49).   
+
+```{r, echo=TRUE}
+so_tbl_visit = table(so_mf_df$Gender, so_mf_df$StackOverflowVisit)
+so_visit <- chisq.test(so_tbl_visit, correct=TRUE)
+print(so_visit)
+print(so_visit$stdres)
+```
+
+
+### Participation - Frequency  
+
+**Survey Question**: "How often do you participate in Q&A on Stack Overflow?" 
+
+
+There is a significant relationship between Gender and participating on Stack Overflow more often ($p$<0.001), with female respondents more likely to have never participated ($r_{ij}$ = 14.64), and men more likely to have participated a few times per week ($r_{ij}$ = 7.53).   
+
+```{r, echo=TRUE}
+so_tbl_part = table(so_mf_df$Gender, so_mf_df$StackOverflowParticipate)
+so_part <- chisq.test(so_tbl_part, correct=TRUE)
+print(so_part)
+print(so_part$stdres)
+
+```
+
+
+### Participation - Contribute  
+
+**Survey Question**: "Do you contribute to repositories on GitHub?"  
+
+
+There is a significant relationship between Gender and contributing to repositories on GitHub ($p$<0.001), with male respondents more likely to have contributed ($r_{ij}$ = 3.77).  
+
+```{r, echo=TRUE}
+gh_tbl_cont = table(gh_mf_df$GENDER, gh_mf_df$PARTICIPATION.TYPE.CONTRIBUTE)
+gh_cont <- chisq.test(gh_tbl_cont, correct=TRUE)
+print(gh_cont)
+print(gh_cont$stdres)
+```
+
+
+### Participation - Follow  
+
+**Survey Question**: "Do you follow other repositories on GitHub?"  
+
+
+There is a significant relationship between Gender and following repositories on GitHub ($p$<0.001), with male respondents more likely to have followed other repositories ($r_{ij}$ = 5.53). 
+```{r, echo=TRUE}
+gh_tbl_follow = table(gh_mf_df$GENDER, gh_mf_df$PARTICIPATION.TYPE.FOLLOW)
+gh_follow <- chisq.test(gh_tbl_follow, correct=TRUE)
+print(gh_follow)
+print(gh_follow$stdres)
+```
+
+
+### Contribution - Code  
+
+**Survey Question**: "Do you contribute code to repositories on GitHub?"  
+
+
+There is a significant relationship between Gender and contributing code to repositories on GitHub ($p$<0.01), with male respondents more likely to have occasionally contributed code ($r_{ij}$ = 2.38).  
+
+```{r, echo=TRUE}
+gh_tbl_cont_code = table(gh_mf_df$GENDER, gh_mf_df$CONTRIBUTOR.TYPE.CONTRIBUTE.CODE)
+gh_cont_code <- chisq.test(gh_tbl_cont_code, correct=TRUE, simulate.p.value = TRUE)
+print(gh_cont_code)
+print(gh_cont_code$stdres)
+```
+
+
+### Contribution - Interest  
+
+**Survey Question**: "Are you interested in contributing code on GitHub in the future?"  
+
+
+No significant difference was observed between male and female developers' interest in contributing code on GitHub in the future. 
+
+```{r, echo=TRUE}
+gh_tbl_cont_int = table(gh_mf_df$GENDER, gh_mf_df$FUTURE.CONTRIBUTION.INTEREST)
+gh_cont_int <- chisq.test(gh_tbl_cont_int, correct=TRUE)
+print(gh_cont_int)
+```
+
+
+### Contribution - Likelihood  
+
+**Survey Question**: "Are you likely to contribute code on GitHub in the future?"  
+
+
+There is a significant relationship between Gender and developers' self-reported likelihood to contribute code on GitHub in the future ($p$<0.05), with male respondents more likely to say they are "very likely" to contribute code in the future ($r_{ij}$ = 3.06), and female respondents more likely to say it is only "somewhat likely" they will contribute code on GitHub in the future ($r_{ij}$ = 2.81).  
+
+```{r, echo=TRUE}
+gh_tbl_cont_like = table(gh_mf_df$GENDER, gh_mf_df$FUTURE.CONTRIBUTION.LIKELIHOOD)
+gh_cont_like <- chisq.test(gh_tbl_cont_like, correct=TRUE)
+print(gh_cont_like)
+print(gh_cont_like$stdres)
+  # Man - Very likely
+  # Women - Somewhat likely
+
+```
+
+***
+
+## RQ2: Relationship between Gender and Perception of Online Developer Communities  
+
+What is the relationship between developers' gender and their experience of being welcomed in online developer communities?
+
+We hypothesize that women will be less likely to perceive themselves as members of the developer communities. [[1]](David and Shapiro, 2008) [[2]](Ford et al., 2016) [[3]](Vasilescu et al., 2015)  
+  
+  
+### Welcoming Community 
+
+**Survey Question**: "How important is a welcoming community when contributing to OS projects?"
+
+
+There is a significant relationship between Gender and perceived importance of a welcoming community in open-source projects ($p$<0.001), with men more likely to report that a welcoming community is only somewhat important ($r_{ij}$ = 4.43).   
+  
+```{r, echo=TRUE}
+gh_tbl_perc_comm = table(gh_mf_df$GENDER, gh_mf_df$OSS.CONTRIBUTOR.PRIORITIES.WELCOMING.COMMUNITY)
+gh_comm <- chisq.test(gh_tbl_perc_comm, correct=TRUE)
+print(gh_comm)
+print(gh_comm$stdres)
+```
+
+### Code of Conduct
+
+**Survey Question**: "How important is a code of conduct when contributing to OS projects?"
+
+
+There is a significant relationship between Gender and perceived importance of a code of conduct in open-source projects ($p$<0.001), with women more likely to report that a code of conduct is very important ($r_{ij}$ = 3.81), while men were more likely to report that it was not important either way ($r_{ij}$ = 4.01).   
+
+```{r, echo=TRUE}
+gh_tbl_perc_code = table(gh_mf_df$GENDER, gh_mf_df$OSS.CONTRIBUTOR.PRIORITIES.CODE.OF.CONDUCT)
+gh_conduct <- chisq.test(gh_tbl_perc_code, correct=TRUE)
+print(gh_conduct)
+print(gh_conduct$stdres)
+  # Women - Very important
+  # Men - Not important eiter way, somewhat important
+```
+
+### Unwelcoming Language
+
+**Survey Question**: "Have you experienced unwelcoming language?"
+
+There is a significant relationship between Gender and experience of unwelcome language on GitHub ($p$<0.005), with women more likely to report having experienced unwelcome language ($r_{ij}$ = 3.99).   
+
+```{r, echo=TRUE}
+gh_tbl_perc_unwel = table(gh_mf_df$GENDER, gh_mf_df$DISCOURAGING.BEHAVIOR.UNWELCOMING.LANGUAGE)
+gh_unwel <- chisq.test(gh_tbl_perc_unwel, correct=TRUE, simulate.p.value = TRUE)
+print(gh_unwel)
+print(gh_unwel$stdres)
+  # Women - Yes
+  # Men - No
+```
+
+### Considered Member (Stack Overflow) 
+
+**Survey Question**: "Do you consider yourself a member of the Stack Overflow community?"  
+
+
+There is a significant relationship between Gender and considering oneself a member of the Stack Overflow community ($p$<0.001), with men more likely to consider themselves members ($r_{ij}$ = 16.92).   
+
+```{r, echo=TRUE}
+so_tbl_perc_member = table(so_mf_df$Gender, so_mf_df$StackOverflowConsiderMember)
+so_mem <- chisq.test(so_tbl_perc_member, correct=TRUE)
+print(so_mem)
+print(so_mem$stdres)
+```
+
+### Consider Member (GitHub)  
+
+**Survey Question**: "I consider myself to be a member of the open source (and/or the Free/Libre software) community"
+
+
+There is a significant relationship between Gender and considering oneself a member of the open-source community on GitHub ($p$<0.01), with men more likely to consider themselves members ($r_{ij}$ = 2.55).
+
+```{r, echo=TRUE}
+gh_tbl_perc_member = table(gh_mf_df$GENDER, gh_mf_df$OSS.IDENTIFICATION)
+gh_mem <- chisq.test(gh_tbl_perc_member, correct=TRUE)
+print(gh_mem) 
+print(gh_mem$stdres)
+```
+
+### Kinship  
+
+**Survey Question**: "I feel a sense of kinship or connection to other developers"
+
+
+There is a significant relationship between Gender and perceived kinship with other developers on Stack Overflow ($p$<0.05), with men more likely to strongly agree that they feel kinship ($r_{ij}$ = 2.08), and women more likely to disagree ($r_{ij}$ = 3.11).   
+
+```{r, echo=TRUE}
+so_tbl_perc_kinship = table(so_mf_df$Gender, so_mf_df$AgreeDisagree2)
+so_kin <- chisq.test(so_tbl_perc_kinship, correct=TRUE)
+print(so_kin)
+print(so_kin$stdres)
+```
+
+### Kinship  
+
+**Survey Question**: "The community values contributions from people like me"
+
+
+There is a significant relationship between Gender and feeling that the GitHub community values "people like them" ($p$<0.001), with women more likely to strongly disagree that the Github community values them ($r_{ij}$ = 2.94).
+
+```{r, echo=TRUE}
+gh_tbl_perc_value = table(gh_mf_df$GENDER, gh_mf_df$EXTERNAL.EFFICACY)
+gh_val <- chisq.test(gh_tbl_perc_value, correct=TRUE)
+print(gh_val)
+print(gh_val$stdres)
+```
+
+
+
+### Self-Efficacy (Stack Overflow)  
+
+**Survey Question**: "I'm not as good at programming as my peers"
+
+
+There is a significant relationship between Gender and developers' self-efficacy for programming on Stack Overflow ($p$<0.001), with women more likely to strongly agree that they are not as good at programming as their peers ($r_{ij}$ = 12.8), and men more likely to strongly disagree ($r_{ij}$ = 12.8).   
+
+```{r, echo=TRUE}
+so_tbl_perc_eff = table(so_mf_df$Gender, so_mf_df$AgreeDisagree3)
+so_eff <- chisq.test(so_tbl_perc_eff, correct=TRUE)
+print(so_eff)
+print(so_eff$stdres)
+```
+
+### Self-Efficacy (GitHub)  
+
+**Survey Question**: "I have the skills and understanding necessary to make meaningful contributions to open source projects."  
+
+No significant difference was observed between male and female developers' self-efficacy for programming on GitHub. 
+
+```{r, echo=TRUE}
+gh_tbl_perc_int_eff = table(gh_mf_df$GENDER, gh_mf_df$INTERNAL.EFFICACY)
+gh_int <- chisq.test(gh_tbl_perc_int_eff, correct=TRUE, simulate.p.value = TRUE)
+print(gh_int)
+```
+
+
+
+<!-- ### Recommend   -->
+
+<!-- **Survey Question**: "How likely are you to recommend StackOverflow to a friend?"   -->
+
+
+<!-- There is a significant relationship between Gender and  ($p$<0.05) with likelihood to recommend Stack Overflow to a friend, with men reporting being more likely to recommend Stack Overflow ($r_{ij}$ = 4.18), and women reporting being less likely to recommend it to a friend ($r_{ij}$ = 7.84).    -->
+
+<!-- ```{r, echo=TRUE} -->
+<!-- so_tbl_perc_rec = table(so_mf_df$Gender, so_mf_df$StackOverflowRecommend) -->
+<!-- so_rec <- chisq.test(so_tbl_perc_rec, correct=TRUE) -->
+<!-- print(so_rec) -->
+<!-- print(so_rec$stdres) -->
+<!-- ``` -->
+
+
+
+***
+
+### RQ3: Relationship between Gender and Employment / Years of experience coding
+
+
+<!-- #### Job Level -->
+<!-- ```{r, echo=FALSE} -->
+<!-- hr_tbl_job = table(hr_mf_df$q3Gender, hr_mf_df$q8JobLevel) -->
+<!-- hr_job <- chisq.test(hr_tbl_job, correct=TRUE) -->
+<!-- print(hr_job) -->
+<!-- print(hr_job$stdres) -->
+<!--   # Male - Senior developer, Architect -->
+<!--   # Female - Student, Level 1 developer, New grad -->
+<!-- ``` -->
+
+<!-- #### Current Role -->
+<!-- ```{r, echo=FALSE} -->
+<!-- print("Current Role") -->
+<!-- hr_tbl_role = table(hr_mf_df$q3Gender, hr_mf_df$q9CurrentRole) -->
+<!-- hr_role <- chisq.test(hr_tbl_role, correct=TRUE) -->
+<!-- print(hr_role) -->
+<!-- print(hr_role$stdres) -->
+<!--   # Male - Full-stack Developer, software Architect, software Engineer, Back-end Developer -->
+<!--   # Female - Student, Software Test Engineer, Web Developer -->
+<!-- ``` -->
+
+<!-- #### Industry -->
+<!-- ```{r, echo=FALSE} -->
+<!-- hr_tbl_industry = table(hr_mf_df$q3Gender, hr_mf_df$q10Industry) -->
+<!-- hr_industry <- chisq.test(hr_tbl_industry, correct=TRUE) -->
+<!-- print(hr_industry) -->
+<!-- print(hr_industry$stdres) -->
+<!--   # Female - Education -->
+<!--   # Male - Financial services, Retail -->
+<!-- ``` -->
+
+<!-- #### Hiring Manager -->
+<!-- ```{r, echo=FALSE} -->
+<!-- hr_tbl_hiring = table(hr_mf_df$q3Gender, hr_mf_df$q16HiringManager) -->
+<!-- hr_hiring <- chisq.test(hr_tbl_hiring, correct=TRUE) -->
+<!-- print(hr_hiring) -->
+<!-- print(hr_hiring$stdres) -->
+<!--   # Male - Yes -->
+<!--   # Female - No -->
+<!-- ``` -->
+
+
+<!-- <!-- #### Employment Status --> -->
+<!-- <!-- ```{r, echo=FALSE} --> -->
+<!-- <!-- gh_tbl_emp = table(gh_mf_df$GENDER, gh_mf_df$EMPLOYMENT.STATUS) --> -->
+<!-- <!-- gh_emp <- chisq.test(gh_tbl_emp, correct=TRUE) --> -->
+<!-- <!-- print(gh_emp) --> -->
+<!-- <!-- # N.S. --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r} --> -->
+<!-- <!-- # ### StackOverflow ### --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # ## Employment Status --> -->
+<!-- <!-- # so_tbl_emp = table(so_mf_df$Gender, so_mf_df$Employment)  --> -->
+<!-- <!-- # so_emp <- chisq.test(so_tbl_emp, simulate.p.value = TRUE)  --> -->
+<!-- <!-- # print(so_emp) --> -->
+<!-- <!-- # print(so_emp$stdres) --> -->
+<!-- <!-- #   # Male - Freelancer or self-employed --> -->
+<!-- <!-- #   # Female - Not employed and looking / Employed part time --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # ## Developer Type --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # so_mf_df$DevType <- as.character(sapply(so_mf_df$DevType, tolower)) --> -->
+<!-- <!-- # print(so_mf_df$DevType) --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Aggregating from choose-all to single response. Not ideal. Loosely ordered by seniority and/or salary --> -->
+<!-- <!-- # so_mf_df$DevType[grep("executive", so_mf_df$DevType)] <- "Executive" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("manager", so_mf_df$DevType)] <- "Manager" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("administrator", so_mf_df$DevType)] <- "Admin" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("data scientist or machine learning specialist|data or business analyst", so_mf_df$DevType)] <- "Data Scientist" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("devops", so_mf_df$DevType)] <- "DevOps" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("full-stack", so_mf_df$DevType)] <- "Full-Stack" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("back-end", so_mf_df$DevType)] <- "Back-end" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("front-end", so_mf_df$DevType)] <- "Front-end" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("mobile", so_mf_df$DevType)] <- "Mobile" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("developer", so_mf_df$DevType)] <- "Developer" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("designer", so_mf_df$DevType)] <- "Designer" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("marketing", so_mf_df$DevType)] <- "" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("educator", so_mf_df$DevType)] <- "Educator" --> -->
+<!-- <!-- # so_mf_df$DevType[grep("student", so_mf_df$DevType)] <- "Student" --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # so_mf_df$DevType <- factor(so_mf_df$DevType) --> -->
+<!-- <!-- # summary(so_mf_df$DevType) --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # so_tbl_dev = table(so_mf_df$Gender, so_mf_df$DevType)  --> -->
+<!-- <!-- # so_dev <- chisq.test(so_tbl_dev,correct=TRUE)  --> -->
+<!-- <!-- # print(so_dev) --> -->
+<!-- <!-- # print(so_dev$stdres) --> -->
+<!-- <!-- #   # Women - Front-end, Data Scientist, Designer, Student, Educator  --> -->
+<!-- <!-- #   # Men - Admin, Executive, Manager, DevOps,    --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # ``` --> -->
+<!-- <!-- # ### Chi-Squares for Gender and Experience coding --> -->
+<!-- <!-- # ```{r, echo=FALSE} --> -->
+<!-- <!-- # ### Stack Overflow ### --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Years Coding --> -->
+<!-- <!-- # so_tbl_years_coding = table(so_mf_df$Gender, so_mf_df$YearsCoding)  --> -->
+<!-- <!-- # so_yrs_coding <- chisq.test(so_tbl_years_coding, correct=TRUE)  --> -->
+<!-- <!-- # print(so_yrs_coding) --> -->
+<!-- <!-- # print(so_yrs_coding$stdres) --> -->
+<!-- <!-- #   # Women - 0-2 years, 3-5 years --> -->
+<!-- <!-- #   # Men - 30+ years, 12-14 years, 15-17 years, 27-29 years, 9-11 years --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Years coding professionally --> -->
+<!-- <!-- # so_tbl_years_coding_prof = table(so_mf_df$Gender, so_mf_df$YearsCodingProf)  --> -->
+<!-- <!-- # so_yrs_coding_prof <- chisq.test(so_tbl_years_coding_prof, correct=TRUE) --> -->
+<!-- <!-- # print(so_yrs_coding_prof) --> -->
+<!-- <!-- # print(so_yrs_coding_prof$stdres) --> -->
+<!-- <!-- #   # Women - 0-2 years, 3-5 years --> -->
+<!-- <!-- #   # Men - 12-14 years, 9-11 years, 6-8 years, 15-17 years, 18-20 years, 30+ years --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Formal Education --> -->
+<!-- <!-- # so_tbl_formal_ed = table(so_mf_df$Gender, so_mf_df$FormalEducation)  --> -->
+<!-- <!-- # so_formal_ed <- chisq.test(so_tbl_formal_ed, correct=TRUE) --> -->
+<!-- <!-- # print(so_formal_ed) --> -->
+<!-- <!-- # print(so_formal_ed$stdres) --> -->
+<!-- <!-- #   # Women - Bachelors, Masters --> -->
+<!-- <!-- #   # Men - some college, Secondary, Primary/elementary --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # ### Github ### --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Formal Education --> -->
+<!-- <!-- # gh_tbl_formal_ed = table(gh_mf_df$GENDER, gh_mf_df$FORMAL.EDUCATION)  --> -->
+<!-- <!-- # gh_formal_ed <- chisq.test(gh_tbl_formal_ed, correct=TRUE)  --> -->
+<!-- <!-- # print(gh_formal_ed) --> -->
+<!-- <!-- # # N.S. --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Age of First Computer --> -->
+<!-- <!-- # gh_tbl_age_computer = table(gh_mf_df$GENDER, gh_mf_df$AGE.AT.FIRST.COMPUTER.INTERNET)  --> -->
+<!-- <!-- # gh_age_computer <- chisq.test(gh_tbl_age_computer, correct=TRUE)  --> -->
+<!-- <!-- # print(gh_age_computer) --> -->
+<!-- <!-- # # N.S. --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # ### HackerRank ### --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Formal Education --> -->
+<!-- <!-- # hr_tbl_formal_ed = table(hr_mf_df$q3Gender, hr_mf_df$q4Education)  --> -->
+<!-- <!-- # hr_formal_ed <- chisq.test(hr_tbl_formal_ed, correct=TRUE)  --> -->
+<!-- <!-- # print(hr_formal_ed) --> -->
+<!-- <!-- # print(hr_formal_ed$stdres) --> -->
+<!-- <!-- #   # Women - Postgraduate, Some college --> -->
+<!-- <!-- #   # Male - High school graduate, Vocational training --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Age Began Coding --> -->
+<!-- <!-- # hr_tbl_age_coding = table(hr_mf_df$q3Gender, hr_mf_df$q1AgeBeginCoding)  --> -->
+<!-- <!-- # hr_age_coding <- chisq.test(hr_tbl_age_coding, correct=TRUE)  --> -->
+<!-- <!-- # print(hr_age_coding) --> -->
+<!-- <!-- # print(hr_age_coding$stdres) --> -->
+<!-- <!-- #   # Women - 16-20 yrs, 31-35, 41-50, 36-40, 26-30 --> -->
+<!-- <!-- #   # Men - 11-15 yrs, 5-10 yrs --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Learn to code at University --> -->
+<!-- <!-- # hr_tbl_learn_uni = table(hr_mf_df$q3Gender, hr_mf_df$q6LearnCodeUni)  --> -->
+<!-- <!-- # hr_learn_uni <- chisq.test(hr_tbl_learn_uni, correct=TRUE)  --> -->
+<!-- <!-- # print(hr_learn_uni) --> -->
+<!-- <!-- # print(hr_learn_uni$stdres) --> -->
+<!-- <!-- #   # Women - Yes --> -->
+<!-- <!-- #   # Men - No --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- # # Learn to code - self-taught --> -->
+<!-- <!-- # hr_tbl_learn_self = table(hr_mf_df$q3Gender, hr_mf_df$q6LearnCodeSelfTaught)  --> -->
+<!-- <!-- # hr_learn_self <- chisq.test(hr_tbl_learn_self, correct=TRUE)  --> -->
+<!-- <!-- # print(hr_learn_self) --> -->
+<!-- <!-- # print(hr_learn_self$stdres) --> -->
+<!-- <!-- #   # Men - Yes --> -->
+<!-- <!-- #   # Women - No --> -->
+<!-- <!-- #  --> -->
+<!-- <!-- ``` --> -->
+
+## Post-Hoc Correction for Multiple Comparisons
+```{r, echo=TRUE}
+
+# Stack Overflow p-values
+so_pvalues <- c(2.2e-16, 2.2e-16, 2.2e-16, 0.0004998,  2.2e-16, 2.2e-16, 2.2e-16, 0.001176, 2.2e-16, 2.2e-16, 2.2e-16, 2.2e-16)
+p.adjust(so_pvalues,method="BH")
+
+# GitHub p-values
+gh_pvalues <- c(0.0002434, 6.429e-08, 0.002499, 0.1897, 0.02649, 0.6291, 0.004837, 2.628e-07, 0.1059, 2.642e-05, 3.251e-08, 0.001999, 0.1839, 0.6011)
+p.adjust(gh_pvalues,method="BH")
+
+# HackerRank p-values
+hr_pvalues <- c(2.2e-16, 2.2e-16, 2.2e-16, 2.2e-16, 2.986e-10, 2.2e-16, 2.2e-16, 2.2e-16)
+p.adjust(hr_pvalues,method="BH")
+
+```
+
