@@ -1,8 +1,6 @@
 # Online Developer Community Surveys 
-Analyses of the gender gap in online software developer communities for the UNU-CS Gender Tech Lab
-August, 2018
-Michael A. Madaio (mmadaio@cs.cmu.edu)
-Dr. Araba Sey
+Analyses of the gender gap in online software developer communities for the UNU-CS Gender Tech Lab  
+August, 2018  
 
 ## Overview
 
@@ -43,3 +41,7 @@ We use publicly available survey data from 3 major online developer communities:
 - To modify or re-run the code, some basic familiarity with Python and the Jupyter development environment may be necessary. See a tutorial [here](http://jupyter-notebook.readthedocs.io/en/latest/notebook.html) for assistance beginning to work with Jupyter.
 - Re-usable data cleaning scripts are located in the `preprocessing` folder
 - The primary analysis results are in the `developer-surveys` folder. The `developer_survey_analyses` script is the main analysis file, with additional visualizations in the `developer_survey_visualizations` file.
+
+## Authors
+* Michael A. Madaio (mmadaio@cs.cmu.edu)
+* Dr. Araba Sey
