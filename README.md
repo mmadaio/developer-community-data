@@ -1,6 +1,4 @@
-# Online Developer Community Surveys 
-Analyses of the gender gap in online software developer communities for the UNU-CS Gender Tech Lab  
-August, 2018  
+# Gender Gap in Online Developer Communities
 
 ## Overview
 
@@ -10,7 +8,7 @@ Developers on these sites may ask and answer coding questions to improve their s
 
 However, despite the promise for online software developer communities to support software developers in their professional development, there are indicators that there may be serious difference in women and men's\* participation in these communities - differences which may further exacerbate existing gender gaps in the global ICT workforce.
 
-\* See the UNU-CS EQUALS [project page](https://cs.unu.edu/research/equals-inaugural-report/) for the nature of the gender analyses used by the UN and the EQUALS project for the purposes of this research. 
+\* See the UNU-CS EQUALS [project page](https://cs.unu.edu/research/equals-inaugural-report/) for more detail on the nature of the gender analyses used by the UN and the EQUALS project for the purposes of this research. 
 
 
 ### Research questions
